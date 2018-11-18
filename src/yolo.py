@@ -1,6 +1,7 @@
 import cv2
 import argparse
 import numpy as np
+import os
 
 class Yolo:
     
@@ -34,6 +35,7 @@ class Yolo:
         '''
         # read image
         image = cv2.imread(image_file)
+        image = cv2.resize(image, (416, 416)) 
         width = image.shape[1]
         height = image.shape[0]
         scale = 0.00392
@@ -81,6 +83,9 @@ class Yolo:
             image (obj): Image object.
             indices (list): List of indices for each object
             boxes (list): List of coordinates for each object
+
+        Return:
+            image (obj): Image with bounding boxes
         '''
         for i in indices:
             i = i[0]
@@ -90,18 +95,63 @@ class Yolo:
             w = box[2]
             h = box[3]
             cv2.rectangle(image, (round(x),round(y)), (round(x+w),round(y+h)), (0,255,0), 2)
-    
+        
+        return image
+
+    def save_image(self, image, directory, filename):
+        '''
+        Saves the image to an output folder
+
+        Args:
+            image (obj): Image object.
+            directory (str): Path of output directory.
+            filename (str): Name of the file.
+        '''
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        path = directory + '/' + filename + '.jpg'
+        cv2.imwrite(path, image)
+
+    def crop_objects(self, image, indices, boxes, height, width):
+        '''
+        Crops the objects out of the main image and normalizes to set dimensions
+
+        Args:
+            image (obj): Image object.
+            indices (list): List of indices for each object
+            boxes (list): List of coordinates for each object
+            height (int): Normalized height.
+            width(int): Normalize width.
+
+        Return:
+            images (list): List of cropped and normalized images.
+        '''
+        images = []
+        for i in indices:
+            i = i[0]
+            box = boxes[i]
+            x = box[0]
+            y = box[1]
+            w = box[2]
+            h = box[3]
+            cropped = image[round(y):round(y+h), round(x):round(x+w)]
+            normalized = cv2.resize(cropped, (width, height)) 
+            images.append(normalized)
+        return images
 
 def main():
     yolo = Yolo('yolov3.cfg', 'yolov3.weights', 'yolov3.txt')
     image, indices, boxes = yolo.extract_objects('dog.jpg')
+
+    # n = 0
+    # cropped = yolo.crop_objects(image, indices, boxes, 200, 200)
+    # for img in cropped:
+    #     yolo.save_image(img, 'output', str(n))
+    #     n = n + 1
+
     yolo.draw_bounding_boxes(image, indices, boxes)
-
-
     cv2.imshow("object detection", image)
     cv2.waitKey(0)
-        
-    cv2.imwrite("object-detection.jpg", image)
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
