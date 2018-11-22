@@ -19,7 +19,8 @@ mapping = {
 
 # variables
 GT_DATA_FILE = 'data/localization/MIO-TCD-Localization/gt_train.csv'
-DATA_PATH = 'data/localization/MIO-TCD-Localization/train/'
+#DATA_PATH = 'data/localization/MIO-TCD-Localization/train/'
+DATA_PATH = 'test_output/'
 
 # read ground truth file
 gt_data = pd.read_csv(GT_DATA_FILE, header=None, dtype={0: str})
@@ -37,8 +38,8 @@ for i, row in gt_data.iterrows():
         # reset values
         current_image = row['image']
         current_labels = []
-    x1 = row['gt_x1']
-    y1 = row['gt_y1']
-    x2 = x1 + 1 if x1 == row['gt_x2'] else row['gt_x2'] 
-    y2 = y1 + 1 if y1 == row['gt_y2'] else row['gt_y2'] 
+    x1 = float(row['gt_x1'])
+    y1 = float(row['gt_y1'])
+    x2 = float(x1 + 1) if x1 == row['gt_x2'] else float(row['gt_x2'])
+    y2 = float(y1 + 1) if y1 == row['gt_y2'] else float(row['gt_y2'])
     current_labels.append( [ '{} {} {} {} {}'.format(mapping[row['label']], x1, y1, x2, y2) ] )
