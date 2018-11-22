@@ -14,7 +14,7 @@ mapping = {
     'pedestrian': 7,
     'pickup_truck': 8,
     'single_unit_truck': 9,
-    'work_van': 11 
+    'work_van': 10 
 }
 
 # variables
