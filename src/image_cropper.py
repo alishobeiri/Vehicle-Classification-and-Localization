@@ -1,13 +1,14 @@
 import pandas as pd
 import cv2
 import os
+import re
 
 # variables
 GT_DATA_FILE = 'data/localization/MIO-TCD-Localization/gt_train.csv'
 DATA_PATH = 'data/localization/MIO-TCD-Localization/train/'
 OUTPUT_DIR = 'output/'
-WIDTH = 200
-HEIGHT = 200
+WIDTH = 50
+HEIGHT = 50
 
 # read ground truth file
 gt_data = pd.read_csv(GT_DATA_FILE, header=None, dtype={0: str})
@@ -24,13 +25,15 @@ for i, row in gt_data.iterrows():
     print('Cropping object: {}/{}'.format(n, gt_data.shape[0]))
     image = cv2.imread('{}{}.jpg'.format(DATA_PATH, row['image']))
     cropped = image[row['gt_y1']:row['gt_y2'], row['gt_x1']:row['gt_x2']]
-    normalized = cv2.resize(cropped, (WIDTH, HEIGHT))
-    save_path = OUTPUT_DIR + 'images/'
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
-    cv2.imwrite(save_path + str(n) + '.jpg', normalized) 
-    mapping.append([n, row['label']])
-    n += 1
+    # some mislabelled data where cropped image is a line and not a box
+    if cropped.shape[0] * cropped.shape[1] > 0:
+        normalized = cv2.resize(cropped, (WIDTH, HEIGHT))
+        save_path = OUTPUT_DIR + 'images/'
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+        cv2.imwrite(save_path + str(n) + '.jpg', normalized) 
+        mapping.append([n, row['label']])
+        n += 1
 
 result = pd.DataFrame(mapping)
 result.to_csv(OUTPUT_DIR + 'gt_cropped.csv', index=False, header=False)
