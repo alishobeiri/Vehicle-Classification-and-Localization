@@ -37,5 +37,8 @@ for i, row in gt_data.iterrows():
         # reset values
         current_image = row['image']
         current_labels = []
-    current_labels.append( [ '{} {} {} {} {}'.format(mapping[row['label']], row['gt_x1'], row['gt_y1'], row['gt_x2'], row['gt_y2']) ] )
-    current_labels.append( [ '{} {} {} {} {}'.format(mapping[row['label']], row['gt_x1'], row['gt_y1'], row['gt_x2'], row['gt_y2']) ] )
+    x1 = row['gt_x1']
+    y1 = row['gt_y1']
+    x2 = x1 + 1 if x1 == row['gt_x2'] else row['gt_x2'] 
+    y2 = y1 + 1 if y1 == row['gt_y2'] else row['gt_y2'] 
+    current_labels.append( [ '{} {} {} {} {}'.format(mapping[row['label']], x1, y1, x2, y2) ] )
