@@ -38,3 +38,4 @@ for i, row in gt_data.iterrows():
         current_image = row['image']
         current_labels = []
     current_labels.append( [ '{} {} {} {} {}'.format(mapping[row['label']], row['gt_x1'], row['gt_y1'], row['gt_x2'], row['gt_y2']) ] )
+    current_labels.append( [ '{} {} {} {} {}'.format(mapping[row['label']], row['gt_x1'], row['gt_y1'], row['gt_x2'], row['gt_y2']) ] )
