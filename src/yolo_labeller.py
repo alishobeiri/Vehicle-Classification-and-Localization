@@ -38,14 +38,3 @@ for i, row in gt_data.iterrows():
         current_image = row['image']
         current_labels = []
     current_labels.append( [ '{} {} {} {} {}'.format(mapping[row['label']], row['gt_x1'], row['gt_y1'], row['gt_x2'], row['gt_y2']) ] )
-
-# create train/test test files
-print('Creating training and testing sets...')
-files = []
-for filename in os.listdir(DATA_PATH):
-    files.append(['{}{}'.format(DATA_PATH, filename)])
-random.shuffle(files)
-train = pd.DataFrame(files[:int(len(files)*0.75)])
-test = pd.DataFrame(files[int(len(files)*0.75):])
-train.to_csv('train.txt', index=False, header=False)
-test.to_csv('test.txt', index=False, header=False)
