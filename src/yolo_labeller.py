@@ -19,8 +19,8 @@ mapping = {
 
 # variables
 GT_DATA_FILE = 'data/localization/MIO-TCD-Localization/gt_train.csv'
-#DATA_PATH = 'data/localization/MIO-TCD-Localization/train/'
-DATA_PATH = 'test_output/'
+DATA_PATH = 'data/localization/MIO-TCD-Localization/train/'
+#DATA_PATH = 'test_output/'
 
 # read ground truth file
 gt_data = pd.read_csv(GT_DATA_FILE, header=None, dtype={0: str})
