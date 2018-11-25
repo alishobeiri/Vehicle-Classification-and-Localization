@@ -59,6 +59,8 @@ class Yolo:
                 scores = detection[5:]
                 class_id = np.argmax(scores)
                 confidence = scores[class_id]
+                if confidence > 0.0:
+                    print('Class: {}. Confidence: {}'.format(class_id, confidence))
                 if confidence > 0.5:
                     center_x = int(detection[0] * width)
                     center_y = int(detection[1] * height)
@@ -73,9 +75,9 @@ class Yolo:
         # remove any duplicates using non maximum supression
         indices = cv2.dnn.NMSBoxes(boxes, confidences, conf_threshold, nms_threshold)
 
-        return image, indices, boxes
+        return image, indices, boxes, class_ids
 
-    def draw_bounding_boxes(self, image, indices, boxes):
+    def draw_bounding_boxes(self, image, indices, boxes, class_ids):
         ''' 
         Draws the bounding boxes of the objects on an image for demo purposes
 
@@ -83,6 +85,7 @@ class Yolo:
             image (obj): Image object.
             indices (list): List of indices for each object
             boxes (list): List of coordinates for each object
+            class_ids (list): List of all the classes
 
         Return:
             image (obj): Image with bounding boxes
@@ -94,7 +97,9 @@ class Yolo:
             y = box[1]
             w = box[2]
             h = box[3]
+            label = str(self.classes[class_ids[i]]) 
             cv2.rectangle(image, (round(x),round(y)), (round(x+w),round(y+h)), (0,255,0), 2)
+            cv2.putText(image, label, (round(x)-10,round(y)-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
         
         return image
 
@@ -141,7 +146,8 @@ class Yolo:
 
 def main():
     yolo = Yolo('yolov3.cfg', 'yolov3.weights', 'yolov3.txt')
-    image, indices, boxes = yolo.extract_objects('dog.jpg')
+    #yolo = Yolo('yolo/yolo-custom.cfg', 'yolo/yolo-custom.weights', 'yolo/yolo-custom.txt')
+    image, indices, boxes, class_ids = yolo.extract_objects('data/localization/MIO-TCD-Localization/train/00000000.jpg')
 
     # n = 0
     # cropped = yolo.crop_objects(image, indices, boxes, 200, 200)
@@ -149,7 +155,7 @@ def main():
     #     yolo.save_image(img, 'output', str(n))
     #     n = n + 1
 
-    yolo.draw_bounding_boxes(image, indices, boxes)
+    yolo.draw_bounding_boxes(image, indices, boxes, class_ids)
     cv2.imshow("object detection", image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
