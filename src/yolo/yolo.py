@@ -50,8 +50,8 @@ class Yolo:
         class_ids = []
         confidences = []
         boxes = []
-        conf_threshold = 0.5
-        nms_threshold = 0.4
+        conf_threshold = 0.2
+        nms_threshold = 0.1
 
         # analyze result
         for out in outs:
@@ -61,7 +61,7 @@ class Yolo:
                 confidence = scores[class_id]
                 if confidence > 0.0:
                     print('Class: {}. Confidence: {}'.format(class_id, confidence))
-                if confidence > 0.5:
+                if confidence > 0.2:
                     center_x = int(detection[0] * width)
                     center_y = int(detection[1] * height)
                     w = int(detection[2] * width)
@@ -145,9 +145,9 @@ class Yolo:
         return images
 
 def main():
-    yolo = Yolo('yolov3.cfg', 'yolov3.weights', 'yolov3.txt')
-    #yolo = Yolo('yolo/yolo-custom.cfg', 'yolo/yolo-custom.weights', 'yolo/yolo-custom.txt')
-    image, indices, boxes, class_ids = yolo.extract_objects('data/localization/MIO-TCD-Localization/train/00000000.jpg')
+    #yolo = Yolo('yolov3.cfg', 'yolov3.weights', 'yolov3.txt')
+    yolo = Yolo('yolo-custom.cfg', 'yolo-custom.weights', 'yolo-custom.txt')
+    image, indices, boxes, class_ids = yolo.extract_objects('../data/localization/MIO-TCD-Localization/train/00000016.jpg')
 
     # n = 0
     # cropped = yolo.crop_objects(image, indices, boxes, 200, 200)
