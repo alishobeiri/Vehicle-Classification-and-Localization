@@ -59,8 +59,7 @@ class Yolo:
                 scores = detection[5:]
                 class_id = np.argmax(scores)
                 confidence = scores[class_id]
-                if confidence > 0.0:
-                    print('Class: {}. Confidence: {}'.format(class_id, confidence))
+                #print('Class: {}. Confidence: {}'.format(class_id, confidence))
                 if confidence > 0.2:
                     center_x = int(detection[0] * width)
                     center_y = int(detection[1] * height)
@@ -147,7 +146,7 @@ class Yolo:
 def main():
     #yolo = Yolo('yolov3.cfg', 'yolov3.weights', 'yolov3.txt')
     yolo = Yolo('yolo-custom.cfg', 'yolo-custom.weights', 'yolo-custom.txt')
-    image, indices, boxes, class_ids = yolo.extract_objects('../data/localization/MIO-TCD-Localization/train/00000016.jpg')
+    image, indices, boxes, class_ids = yolo.extract_objects('../data/localization/MIO-TCD-Localization/train/00094811.jpg')
 
     # n = 0
     # cropped = yolo.crop_objects(image, indices, boxes, 200, 200)
