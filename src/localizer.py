@@ -3,15 +3,32 @@ import pandas as pd
 pd.options.mode.chained_assignment = None
 import cv2
 import os
+import numpy as np
 
 class Localizer:
 
-    def __init__(self, ground_truth, verbose=True):
-        test_images = pd.read_csv('yolo/test.txt')
+    def __init__(self, ground_truth, test_set, verbose=True):
+        """
+        Initializes localizer class used for running localization + classification through a dataset
+        """
+        # keep track of the current scoring metrics
+        metrics = {
+            'tp': 0, # number of true positives
+            'fp': 0, # number of false positives
+            'fn': 0, # number of false negatives
+            'yolo': 0, # number of correct classifications by yolo
+            'total': 0, # total number of images
+            'non-detect': 0 # total number of images where no objects were detected
+        }
+
+        # load the test sets
+        test_images = pd.read_csv(test_set)
         
+        # load the ground truths
         gt_data = pd.read_csv(ground_truth, header=None, dtype={0: str})
         gt_data.columns = ['image', 'label', 'gt_x1', 'gt_y1', 'gt_x2', 'gt_y2']
 
+        self.metrics = metrics
         self.dim = 416
         self.test_images = test_images
         self.gt_data = gt_data
@@ -49,10 +66,12 @@ class Localizer:
 
         Args:
             detections: List of detections given in same format as gt_train.csv file
+            ground_truth: List of the ground truths to use for comparison
             image: Image object of the detection
 
         Return:
-            image: Image with bounding boxes
+            result_pred: Image with predictions drawn
+            result_gt: Image with ground truth boxes drawn
         """
         result_pred = image.copy()
         result_gt = image.copy()
@@ -66,7 +85,80 @@ class Localizer:
         
         return result_pred, result_gt
 
-    def evaluate_prediction(self, detections, image, image_path):
+    def calculate_overlap(self, pred, gt):
+        """
+        Calculates the pixel overal between two detections in an image
+
+        Args:
+            pred: Coordinates for the prediction [x1, y1, x2, y2]
+            gt: Coordinates for the ground truth [x1, y1, x2, y2]
+
+        Returns:
+            percent_overlap: Overlap in percent value
+        """
+        # create binary images with object pixels set to 1
+        image_pred = np.full((self.dim, self.dim), False)
+        image_pred[pred[1]:pred[3],pred[0]:pred[2]] = True
+
+        image_gt = np.full((self.dim, self.dim), False)
+        image_gt[gt[1]:gt[3],gt[0]:gt[2]] = True
+
+        # perform AND operation to calculate overlap
+        result = np.bitwise_and(image_gt, image_pred)
+        percent_overlap = np.sum(result) / np.sum(image_gt)
+
+        # return the sum of array (number of 1s)
+        return percent_overlap
+    
+    def calculate_score(self, detections, ground_truth):
+        """
+        Calculates the localization score of the prediction and updates metrics values
+
+        Args:
+            detections: List of detections given in same format as gt_train.csv file
+            ground_truth: List of the ground truths to use for comparison
+        """
+        tp, fp, fn = 0, 0, 0
+        detections_copy = detections.copy()
+        match_threshold = 0.7
+        for i, row in ground_truth.iterrows():
+            gt = [ row['gt_x1'], row['gt_y1'], row['gt_x2'], row['gt_y2'] ]
+            # find maximum overlap
+            max_overlap = [0.0, []]
+            for d in detections_copy:
+                pred = d[2:6]
+                overlap = self.calculate_overlap(pred, gt)
+                if overlap > max_overlap[0]:
+                    max_overlap = [overlap, d]
+            # if max overlap exceed threshold, then mark as true positive
+            if max_overlap[0] > match_threshold:
+                tp += 1
+                if d[1] == row['label']:
+                    self.metrics['yolo'] += 1
+                detections_copy.remove(max_overlap[1])
+            else:
+                fn += 1
+        # mark any other detections as false positive
+        fp = len(detections) - tp
+
+        # update global metrics
+        self.metrics['tp'] += tp
+        self.metrics['fp'] += fp
+        self.metrics['fn'] += fn
+        print('tp: {}, fp: {}, fn: {}'.format(tp,fp,fn))
+        print('{}\n'.format(self.metrics))
+
+    def evaluate_prediction(self, detections, image, image_path, display=False):
+        """
+        Evaluates the result of a prediction by validating the prediction against the
+        ground truth and computing DICE scores for localization.
+
+        Args:
+            detections: The list of detections computed by YOLO
+            image: The image object which the detection was performed on
+            image_path: The path to the actual image
+            display: Whether to show the display for visualization (False by default)
+        """
         # load ground truth for image and scale to 416x416
         ground_truth = self.gt_data.loc[self.gt_data['image'] == detections[0][0]]
         height, width, _ = (cv2.imread(image_path)).shape
@@ -77,14 +169,15 @@ class Localizer:
         ground_truth['gt_y1'] = ground_truth['gt_y1'].apply(lambda x: int(x * self.dim / height))
         ground_truth['gt_y2'] = ground_truth['gt_y2'].apply(lambda x: int(x * self.dim / height))
 
-        # draw bounding boxes
-        image_pred, image_gt = self.draw_bounding_boxes(detections, ground_truth, image)
+        self.calculate_score(detections, ground_truth)
 
-        # display results
-        cv2.imshow('Predictions: {}'.format(detections[0][0]), image_pred)
-        cv2.imshow('Ground Truth: {}'.format(detections[0][0]), image_gt)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        # show bounding boxes if display is set to true
+        if display:
+            image_pred, image_gt = self.draw_bounding_boxes(detections, ground_truth, image)
+            cv2.imshow('Predictions: {}'.format(detections[0][0]), image_pred)
+            cv2.imshow('Ground Truth: {}'.format(detections[0][0]), image_gt)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
 
     def run(self, image_directory, output_directory):
         """
@@ -98,16 +191,25 @@ class Localizer:
         # store the final prediction results for yolo only and yolo+SVM
         predictions_yolo = []
         predictions_yolo_svm = []
+
+        # iterate through each test image 
         for i, row in self.test_images.iterrows():
             print('Analyzing image {}/{}'.format(i, self.test_images.shape[0]))
-            if i == 10:
+            self.metrics['total'] += 1
+            if i == 30:
                 break
+            # run yolo and retrieve results from image
             detections, image = self.analyze_image(image_directory, row[0].split('/')[-1])
-            self.evaluate_prediction(detections, image, '{}/{}'.format(image_directory, row[0].split('/')[-1]))
-            for d in detections:
-                predictions_yolo.append(d)
+            # evaluate the prediction result
+            if len(detections) > 0:
+                self.evaluate_prediction(detections, image, '{}/{}'.format(image_directory, row[0].split('/')[-1]), display=False)
+                # add detections to result list
+                for d in detections:
+                    predictions_yolo.append(d)
+            else:
+                self.metrics['non-detect'] += 1
         
-        # output prediction results
+        # write predictions to a csv file
         predictions_yolo = pd.DataFrame(predictions_yolo)
         predictions_yolo_svm = pd.DataFrame(predictions_yolo_svm)
         if not os.path.exists(output_directory):
@@ -116,5 +218,5 @@ class Localizer:
         predictions_yolo_svm.to_csv( '{}/predictions_yolo_svm.csv'.format(output_directory), index=False, header=False)
 
 if __name__ == "__main__":
-    localizer = Localizer('data/localization/MIO-TCD-Localization/gt_train.csv')
+    localizer = Localizer('data/localization/MIO-TCD-Localization/gt_train.csv', 'yolo/test.txt')
     localizer.run('data/localization/MIO-TCD-Localization/train', 'output')
