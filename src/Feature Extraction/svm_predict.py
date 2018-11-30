@@ -5,11 +5,11 @@ import matplotlib.pyplot as plt
 import cv2
 from joblib import dump, load
 
-class SVM:
-	def __init__(svm_filename):
-		clf = load(svm_filename)
+class SVM(object):
+	def __init__(self, svm_filename):
+		self.clf = load(svm_filename)
 
-	def hog(img, plot=False):
+	def hog(self, img, plot=False):
 	    img_g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 	    fd = hog_sklearn(img_g, orientations=4,
 	                        pixels_per_cell = (3, 3),
@@ -29,10 +29,12 @@ class SVM:
 	    return fd
 	
 
-	def predict(img):
-		img_features = hog(img)
-		return clf.predict(img_features)
-
+	def predict(self, img):
+		plt.imshow(img)
+		img = cv2.resize(img, (64, 64))
+		img_features = self.hog(img).reshape(1, -1)
+		pred = self.clf.predict(img_features)
+		return pred
 
 
 
