@@ -18,7 +18,9 @@ class Localizer:
             'fn': 0, # number of false negatives
             'yolo': 0, # number of correct classifications by yolo
             'total': 0, # total number of images
-            'non-detect': 0 # total number of images where no objects were detected
+            'non-detect': 0, # total number of images where no objects were detected
+            'predicted-labels': [], # predicted labels for true positives
+            'true-labels': []
         }
 
         # load the test sets
@@ -32,7 +34,7 @@ class Localizer:
         self.dim = 416
         self.test_images = test_images
         self.gt_data = gt_data
-        self.yolo = Yolo('yolo/yolo-custom.cfg', 'yolo/yolo-custom11160.weights', 'yolo/yolo-custom.txt')
+        self.yolo = Yolo('yolo/yolo-custom.cfg', 'yolo/yolo-custom22288.weights', 'yolo/yolo-custom.txt')
         self.iterator = 0
 
     def analyze_image(self, image_directory, name):
@@ -121,6 +123,7 @@ class Localizer:
         tp, fp, fn = 0, 0, 0
         detections_copy = detections.copy()
         match_threshold = 0.7
+        correct_classifications = 0
         for i, row in ground_truth.iterrows():
             gt = [ row['gt_x1'], row['gt_y1'], row['gt_x2'], row['gt_y2'] ]
             # find maximum overlap
@@ -133,8 +136,11 @@ class Localizer:
             # if max overlap exceed threshold, then mark as true positive
             if max_overlap[0] > match_threshold:
                 tp += 1
+                self.metrics['predicted-labels'].append(d[1])
+                self.metrics['true-labels'].append(row['label'])
                 if d[1] == row['label']:
                     self.metrics['yolo'] += 1
+                    correct_classifications += 1
                 detections_copy.remove(max_overlap[1])
             else:
                 fn += 1
@@ -146,7 +152,10 @@ class Localizer:
         self.metrics['fp'] += fp
         self.metrics['fn'] += fn
         print('tp: {}, fp: {}, fn: {}'.format(tp,fp,fn))
-        print('{}\n'.format(self.metrics))
+        print('Correct classifications (YOLO): {}/{} \n'.format(correct_classifications, tp))
+
+        print('\nTotal Metrics- tp: {}, fp: {}, fn: {} '.format(self.metrics['tp'],self.metrics['fp'],self.metrics['fn']))
+        print('Classifications (YOLO): {}/{} \n'.format(self.metrics['yolo'], self.metrics['tp']))
 
     def evaluate_prediction(self, detections, image, image_path, display=False):
         """
@@ -196,7 +205,7 @@ class Localizer:
         for i, row in self.test_images.iterrows():
             print('Analyzing image {}/{}'.format(i, self.test_images.shape[0]))
             self.metrics['total'] += 1
-            if i == 30:
+            if i == 100:
                 break
             # run yolo and retrieve results from image
             detections, image = self.analyze_image(image_directory, row[0].split('/')[-1])
