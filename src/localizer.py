@@ -1,14 +1,14 @@
 from yolo.yolo import Yolo
 import pandas as pd
 pd.options.mode.chained_assignment = None
-from svm.svm_predict import SVM
+from classifier.svm_predict import SVM
 import cv2
 import os
 import numpy as np
 
 class Localizer:
 
-    def __init__(self, ground_truth, test_set, verbose=True):
+    def __init__(self, ground_truth, test_set, weights_file, verbose=True):
         """
         Initializes localizer class used for running localization + classification through a dataset
         """
@@ -21,9 +21,7 @@ class Localizer:
             'svm': 0, # number of correct classifications by svm
             'total': 0, # total number of images
             'non-detect': 0, # total number of images where no objects were detected
-            'predicted-labels-yolo': [], # predicted yolo labels for true positives
-            'predicted-labels-svm': [], # predicted svm labels for true positives
-            'true-labels': [] # true labels for true positives
+            'predictions': [] # predictions for each detected object [svm prediction, yolo prediction, true label]
         }
 
         # load the test sets
@@ -37,8 +35,8 @@ class Localizer:
         self.dim = 416
         self.test_images = test_images
         self.gt_data = gt_data
-        self.yolo = Yolo('yolo/yolo-custom.cfg', 'yolo/yolo-custom22288.weights', 'yolo/yolo-custom.txt')
-        self.svm = SVM('svm/Pretrained/svm_k_4.joblib')
+        self.yolo = Yolo('yolo/yolo-custom.cfg', weights_file, 'yolo/yolo-custom.txt')
+        self.svm = SVM('classifier/Pretrained/svm/svm_k_4.joblib')
         self.iterator = 0
 
     def analyze_image(self, image_directory, name):
@@ -119,7 +117,7 @@ class Localizer:
     def classify_svm(self, detection, image):
         cropped = image[detection[3]:detection[5], detection[2]:detection[4]]
         pred = self.svm.predict(cropped)
-        return str(pred[0]).split("'")[1]
+        return pred
         
     
     def calculate_score(self, detections, ground_truth, image):
@@ -148,14 +146,13 @@ class Localizer:
             # if max overlap exceed threshold, then mark as true positive
             if max_overlap[0] > match_threshold:
                 tp += 1
-                self.metrics['predicted-labels-yolo'].append(d[1])
-                self.metrics['true-labels'].append(row['label'])
                 # score yolo classification
                 if max_overlap[1][1] == row['label']:
                     self.metrics['yolo'] += 1
                     correct_classifications_yolo += 1
                 # score svm classification
                 svm_classification = self.classify_svm(max_overlap[1], image)
+                self.metrics['predictions'].append([ svm_classification, max_overlap[1][1], row['label'] ])
                 if svm_classification == row['label']:
                     self.metrics['svm'] += 1
                     correct_classifications_svm += 1
@@ -218,35 +215,38 @@ class Localizer:
             image_directory: Path to images directory
             output_directory: Output file name
         """
-        # store the final prediction results for yolo only and yolo+SVM
-        predictions_yolo = []
-        predictions_yolo_svm = []
 
         # iterate through each test image 
         for i, row in self.test_images.iterrows():
             print('Analyzing image {}/{}'.format(i, self.test_images.shape[0]))
             self.metrics['total'] += 1
-            if i == 100:
+            if i == 10:
                 break
             # run yolo and retrieve results from image
             detections, image = self.analyze_image(image_directory, row[0].split('/')[-1])
             # evaluate the prediction result
             if len(detections) > 0:
                 self.evaluate_prediction(detections, image, '{}/{}'.format(image_directory, row[0].split('/')[-1]), display=False)
-                # add detections to result list
-                for d in detections:
-                    predictions_yolo.append(d)
             else:
                 self.metrics['non-detect'] += 1
         
         # write predictions to a csv file
-        predictions_yolo = pd.DataFrame(predictions_yolo)
-        predictions_yolo_svm = pd.DataFrame(predictions_yolo_svm)
+        predictions = pd.DataFrame(self.metrics['predictions'], columns=['svm', 'yolo', 'gt'])
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
-        predictions_yolo.to_csv( '{}/predictions_yolo.csv'.format(output_directory), index=False, header=False)
-        predictions_yolo_svm.to_csv( '{}/predictions_yolo_svm.csv'.format(output_directory), index=False, header=False)
+        predictions.to_csv( '{}/predictions.csv'.format(output_directory), index=False, header=True)
+
+        # write metrics to a sav file
+        metrics = []
+        metrics.append(['Localization True Positives: {}'.format(self.metrics['tp'])])
+        metrics.append(['Localization False Positives : {}'.format(self.metrics['fp'])])
+        metrics.append(['Localization False Negatives: {}'.format(self.metrics['fn'])])
+        metrics.append(['Correct Classifications (SVM): {}/{}'.format(self.metrics['svm'], self.metrics['tp'])])
+        metrics.append(['Correct Classifications (YOLO): {}/{}'.format(self.metrics['yolo'], self.metrics['tp'])])
+        metrics.append(['Dice Score: {}'.format(2*self.metrics['tp'] / (2*self.metrics['tp'] + self.metrics['fp'] + self.metrics['fn']))])
+        metrics = pd.DataFrame(metrics)
+        metrics.to_csv( '{}/metrics.csv'.format(output_directory), index=False, header=False)
 
 if __name__ == "__main__":
-    localizer = Localizer('data/localization/MIO-TCD-Localization/gt_train.csv', 'yolo/test.txt')
+    localizer = Localizer('data/localization/MIO-TCD-Localization/gt_train.csv', 'yolo/test.txt', 'yolo/yolo-custom22288.weights')
     localizer.run('data/localization/MIO-TCD-Localization/train', 'output')
