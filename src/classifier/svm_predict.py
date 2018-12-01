@@ -33,8 +33,9 @@ class SVM(object):
 		plt.imshow(img)
 		img = cv2.resize(img, (64, 64))
 		img_features = self.hog(img).reshape(1, -1)
-		pred = self.clf.predict(img_features)
-		return pred
-
-
+		preds = self.clf.predict(img_features)
+		preds = [i.decode('utf-8') for i in preds]
+		if len(preds) == 1:
+			return preds[0]
+		return preds
 
