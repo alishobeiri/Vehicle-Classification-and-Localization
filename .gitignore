@@ -1,5 +1,4 @@
 src/yolov3.weights
 *.npz
-*.jpg
 .ipynb_checkpoints/
 src/Feature Extraction/*.zip
