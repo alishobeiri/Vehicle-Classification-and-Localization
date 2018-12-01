@@ -34,7 +34,7 @@ class Localizer:
         self.dim = 416
         self.test_images = test_images
         self.gt_data = gt_data
-        self.yolo = Yolo('yolo/yolo-custom.cfg', 'yolo/yolo-custom11160.weights', 'yolo/yolo-custom.txt')
+        self.yolo = Yolo('yolo/yolo-custom.cfg', 'yolo/yolo-custom22288.weights', 'yolo/yolo-custom.txt')
         self.iterator = 0
 
     def analyze_image(self, image_directory, name):
@@ -154,6 +154,9 @@ class Localizer:
         print('tp: {}, fp: {}, fn: {}'.format(tp,fp,fn))
         print('Correct classifications (YOLO): {}/{} \n'.format(correct_classifications, tp))
 
+        print('\nTotal Metrics- tp: {}, fp: {}, fn: {} '.format(self.metrics['tp'],self.metrics['fp'],self.metrics['fn']))
+        print('Classifications (YOLO): {}/{} \n'.format(self.metrics['yolo'], self.metrics['tp']))
+
     def evaluate_prediction(self, detections, image, image_path, display=False):
         """
         Evaluates the result of a prediction by validating the prediction against the
@@ -202,7 +205,7 @@ class Localizer:
         for i, row in self.test_images.iterrows():
             print('Analyzing image {}/{}'.format(i, self.test_images.shape[0]))
             self.metrics['total'] += 1
-            if i == 30:
+            if i == 100:
                 break
             # run yolo and retrieve results from image
             detections, image = self.analyze_image(image_directory, row[0].split('/')[-1])
