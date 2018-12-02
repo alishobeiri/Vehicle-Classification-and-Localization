@@ -20,7 +20,7 @@ from joblib import dump, load
 import warnings
 warnings.filterwarnings('ignore')
 
-def hog(img, orientations=4, block_size=3, cell_size=3, plot=False):
+def hog(img, orientations=8, block_size=5, cell_size=4, plot=False):
     img_g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     fd = hog_sklearn(img_g, orientations=orientations,
                         pixels_per_cell = (cell_size, cell_size),
