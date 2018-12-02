@@ -3,8 +3,8 @@ import os
 import random
 
 # variables
-DATA_PATH = 'data/localization/MIO-TCD-Localization/train/'
-OUTPUT_PATH = '/home/cv/415-final-project/src/data/localization/MIO-TCD-Localization/train/'
+DATA_PATH = '../../data/localization/MIO-TCD-Localization/train/'
+OUTPUT_PATH = '../home/cv/415-final-project/src/data/localization/MIO-TCD-Localization/train/'
 
 # create train/test test files
 print('Creating training and testing sets...')
