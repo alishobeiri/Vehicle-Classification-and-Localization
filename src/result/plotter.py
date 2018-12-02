@@ -36,7 +36,7 @@ def plot_confusion_matrix(cm, classes,
     plt.xlabel('Predicted label')
     plt.tight_layout()
 
-iteration = '25000'
+iteration = '10000'
 
 # load class names
 class_names = [
@@ -73,14 +73,14 @@ with open('scores-yolo-{}.txt'.format(iteration), 'w') as f:
     f.write(scores_yolo)
 
 # compute confusion matrix
-svm_confusion = confusion_matrix(svm_pred, labels)
+# svm_confusion = confusion_matrix(svm_pred, labels)
 yolo_confusion = confusion_matrix(yolo_pred, labels)
 
 # plot confusion matrix
-plt.figure(figsize=(8,8))
-plot_confusion_matrix(svm_confusion, classes=class_names, normalize=True,
-                      title='SVM Classification On Localization Dataset')
-plt.savefig('confusion-svm-{}.png'.format(iteration))
+# plt.figure(figsize=(8,8))
+# plot_confusion_matrix(svm_confusion, classes=class_names, normalize=True,
+#                       title='SVM Classification On Localization Dataset')
+# plt.savefig('confusion-svm-{}.png'.format(iteration))
 
 plt.figure(figsize=(8,8))
 plot_confusion_matrix(yolo_confusion, classes=class_names, normalize=True,

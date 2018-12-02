@@ -248,5 +248,5 @@ class Localizer:
         metrics.to_csv( '{}/metrics.csv'.format(output_directory), index=False, header=False)
 
 if __name__ == "__main__":
-    localizer = Localizer('data/localization/MIO-TCD-Localization/gt_train.csv', 'yolo/test.txt', 'yolo/yolo-custom22288.weights')
+    localizer = Localizer('data/localization/MIO-TCD-Localization/gt_train.csv', 'yolo/test.txt', 'yolo/yolo-custom-25000.weights')
     localizer.run('data/localization/MIO-TCD-Localization/train', 'output')
