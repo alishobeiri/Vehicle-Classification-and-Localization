@@ -21,6 +21,19 @@ import warnings
 warnings.filterwarnings('ignore')
 
 def hog(img, orientations=8, block_size=5, cell_size=4, plot=False):
+    """
+    Performs HoG Feature Extraction. The parameters default 
+    to best parmaeters, found through hyper parameter tunung. 
+    Code can be found in /src/classifiers/feature_extraction.py
+    
+    Args: 
+        img: Image to analyze. 
+        orientations: Number of bins and orientations, defaults to 8.
+        block_size: Block size, defaults to 5.
+        cell_size: Cell size, defaults to 4. 
+        plot: Boolean setting whether to show the extraction result, 
+              defaults to False.
+    """
     img_g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     fd = hog_sklearn(img_g, orientations=orientations,
                         pixels_per_cell = (cell_size, cell_size),
@@ -40,6 +53,27 @@ def hog(img, orientations=8, block_size=5, cell_size=4, plot=False):
     return fd
 
 def get_batch(df, index, batch_size, img_path, feature_param=None, viz=False):
+    """
+    Get current training or testing batch from dataset. 
+
+    Args: 
+        df: Dataset pandas dataframe.
+        index: Starting index of the batch.
+        batch_size: Batch size. 
+        img_path: Path to the images directory. 
+        feature_param: Feature extraction parameters, defaults to None. 
+            Type: 
+                dict() = { 
+                            'orientations': orientations, 
+                            'block_size': block_size,
+                            'cell_size': cell_size 
+                         }
+        viz: Set whether to show HoG feature extraction map, defaults to False. 
+    
+    Returns: 
+        batch features, batch labels. 
+    """
+
     batch_df = df.iloc[index:index+batch_size]
     batch_img = []
     batch_labels = []
@@ -48,6 +82,7 @@ def get_batch(df, index, batch_size, img_path, feature_param=None, viz=False):
         img = cv2.imread(img_filename, cv2.IMREAD_COLOR)
         if img is not None:
             img = cv2.resize(img, (64, 64))
+
             if feature_param:
                 img = hog(img, 
                           orientations=feature_param['orientations'],
@@ -55,6 +90,7 @@ def get_batch(df, index, batch_size, img_path, feature_param=None, viz=False):
                           cell_size=feature_param['cell_size'],
                           plot=viz)
             else:
+                # Perform HoG with default tuned parameters. 
                 img = hog(img, plot=viz)
             batch_img.append(img)
             batch_labels.append(label)
@@ -64,11 +100,18 @@ def get_batch(df, index, batch_size, img_path, feature_param=None, viz=False):
 
 def plot_confusion_matrix(cm, classes,
                           normalize=False,
-                          title='Confusion matrix'):
-                        #   cmap=plt.cm.Blues):
+                          title='Confusion matrix',
+                          cmap=plt.cm.Blues):
     """
-    This function prints and plots the confusion matrix.
+    Prints and plots the confusion matrix.
     Normalization can be applied by setting `normalize=True`.
+
+    Args: 
+        cm: Confusion Matrix.
+        classes: Unique classes label, 1D array like.
+        normalize: boolean setting Normalization, defaults to False.
+        title: Title of the confusion matrix, defaults to 'Confusion Matrix'. 
+        cmap: Confusion matrix color scheme, defaults to Blue. 
     """
     if normalize:
         non_zero = cm > 0
@@ -115,22 +158,36 @@ def train_and_predict(clf, train_set, test_set, batch_size, img_path, feature_pa
     s_time = time.time()
     unique_classes = train_set["Category"].unique()
     num_classes = unique_classes.shape[0]
+
+    # Extract current training batch and fit classifier. 
     for i in range(0, train_set.shape[0], batch_size):
-        features_train, train_label = get_batch(train_set, i, batch_size, img_path, feature_param=feature_param)
+        features_train, train_label = get_batch(train_set, 
+                                                i, 
+                                                batch_size, 
+                                                img_path, 
+                                                feature_param=feature_param)
 
         features_train = features_train.reshape(features_train.shape[0], -1)
         clf.partial_fit(features_train, train_label, classes=unique_classes)
 
+
+    # Get testing prediction results and ground truth labels. 
     all_test_label = []
     all_pred = []
     for i in range(0, test_set.shape[0], batch_size):
-        features_test, test_label = get_batch(test_set, i, batch_size, img_path, feature_param=feature_param)
+        features_test, test_label = get_batch(test_set, 
+                                              i, 
+                                              batch_size, 
+                                              img_path, 
+                                              feature_param=feature_param)
+
         features_test = features_test.reshape(features_test.shape[0], -1)
         
         preds = clf.predict(features_test)
         all_test_label.extend(test_label)
         all_pred.extend(preds)
     
+    # Calculate precision, accuracy and recall metrics. 
     prec = precision_score(all_test_label, all_pred, average='micro')
     acc = accuracy_score(all_test_label, all_pred)
     recall = recall_score(all_test_label, all_pred, average='micro')
@@ -190,19 +247,24 @@ def k_fold_training(classifier, data_path, k, output_dir, save_model=True):
     for k, fold in enumerate(k_fold):
         s_time = time.time()
         print("Iteration/K-Valid: ", k)
+
+        # Create SVM or Logistic Regression Classifiers 
         if classifier == 'svm':
             clf = SGDClassifier(penalty='l2')
-        else:
+        else: 
             clf = SGDClassifier(penalty='l2', loss='log')
         train_df = shuffle(df.iloc[fold[0]]).reset_index(drop=True)
         test_df = shuffle(df.iloc[fold[1]]).reset_index(drop=True)
 
+        output = "{}/Plots/confusion_{}.jpg".format(output_dir, k)
+
+        # Train classification and get validation results. 
         _, prec, acc, recall = train_and_predict(clf, 
                                                 train_df, 
                                                 test_df, 
                                                 batch_size, 
                                                 img_path, 
-                                                output="{}/Plots/confusion_{}.jpg".format(output_dir, k))
+                                                output=output)
         
         if save_model:
             dump(svm, join(output_dir, classifier + '_k_' + str(k) + '.joblib'))
