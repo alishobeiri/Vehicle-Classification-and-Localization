@@ -1,3 +1,4 @@
+from argparse import ArgumentParser
 import numpy as np
 import pandas as pd
 import matplotlib 
@@ -63,8 +64,8 @@ def get_batch(df, index, batch_size, img_path, feature_param=None, viz=False):
 
 def plot_confusion_matrix(cm, classes,
                           normalize=False,
-                          title='Confusion matrix',
-                          cmap=plt.cm.Blues):
+                          title='Confusion matrix'):
+                        #   cmap=plt.cm.Blues):
     """
     This function prints and plots the confusion matrix.
     Normalization can be applied by setting `normalize=True`.
@@ -152,11 +153,12 @@ def train_and_predict(clf, train_set, test_set, batch_size, img_path, feature_pa
     
     return all_pred, prec, acc, recall
 
-def k_fold_training_svm(data_path, k, output_dir, save_model=True):
+def k_fold_training(classifier, data_path, k, output_dir, save_model=True):
     ''' 
     Performs k_fold training on the dataset using SVM.
 
     Args:
+        classifier: classification model (svm or logistic regression)
         data_path: path to the dataset
         k: number of k_fold cross-validation
         output_dir: output directory
@@ -188,12 +190,14 @@ def k_fold_training_svm(data_path, k, output_dir, save_model=True):
     for k, fold in enumerate(k_fold):
         s_time = time.time()
         print("Iteration/K-Valid: ", k)
-        svm = SGDClassifier(penalty='l2')
-        print(fold[0])
+        if classifier == 'svm':
+            clf = SGDClassifier(penalty='l2')
+        else:
+            clf = SGDClassifier(penalty='l2', loss='log')
         train_df = shuffle(df.iloc[fold[0]]).reset_index(drop=True)
         test_df = shuffle(df.iloc[fold[1]]).reset_index(drop=True)
 
-        _, prec, acc, recall = train_and_predict(svm, 
+        _, prec, acc, recall = train_and_predict(clf, 
                                                 train_df, 
                                                 test_df, 
                                                 batch_size, 
@@ -201,7 +205,7 @@ def k_fold_training_svm(data_path, k, output_dir, save_model=True):
                                                 output="{}/Plots/confusion_{}.jpg".format(output_dir, k))
         
         if save_model:
-            dump(svm, join(output_dir, 'svm_k_' + str(k) + '.joblib'))
+            dump(svm, join(output_dir, classifier + '_k_' + str(k) + '.joblib'))
         
         prec_acc_recall.append((prec, acc, recall))
     np.savetxt(join(output_dir, 'Measures/prec_acc_recall.csv'), 
@@ -209,8 +213,26 @@ def k_fold_training_svm(data_path, k, output_dir, save_model=True):
                delimiter=',', 
                header="precision,accuracy,recall")
 
+def _parser():
+    usage = ''
+    parser = ArgumentParser(prog='classifier', usage=usage)
+    parser.add_argument('-c', '--classifier', help='Classifier (svm or logreg)', required=True)
+    parser.add_argument('-d', '--data', help='Data Path', required=True)
+    parser.add_argument('-o', '--output', help='Output directory', required=True)
+    parser.add_argument('-k', '--kfold', help='K fold', required=False)
+
+    return parser
+
 
 if __name__ == "__main__" :
+    args = _parser().parse_args() 
+    clf = args.classifier
+
+    # Make sure that classifier is either SVM or Log Regression
+    if not (clf == 'svm' or clf == 'logreg'):
+        raise Exception('The classifier argument should either be "svm" or "logreg"')
     data_path = "../../../../data/Classification/"
     output_dir = "./test/"
-    k_fold_training_svm(data_path=data_path, k=10, save_model=True, output_dir=output_dir)
+    k = int(args.kfold) if args.kfold else 10
+
+    k_fold_training(clf, data_path=args.data, k=k, output_dir=args.output, save_model=True)
