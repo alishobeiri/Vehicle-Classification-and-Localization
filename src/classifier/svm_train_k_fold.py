@@ -36,7 +36,7 @@ def hog(img, orientations=4, block_size=3, cell_size=3, plot=False):
         plt.show()
     return fd
 
-def get_batch(df, index, img_path, batch_size=10000, features=True):
+def get_batch(df, index, batch_size, img_path, features=None, viz=False):
     batch_df = df.iloc[index:index+batch_size]
     batch_img = []
     batch_labels = []
@@ -46,7 +46,13 @@ def get_batch(df, index, img_path, batch_size=10000, features=True):
         if img is not None:
             img = cv2.resize(img, (64, 64))
             if features:
-                img = hog(img)
+                img = hog(img, 
+                          orientations=features['orientation'],
+                          block_size=features['block_size'],
+                          cell_size=features['cell_size'],
+                          plot=viz)
+            else:
+                img = hog(img, plot=viz)
             batch_img.append(img)
             batch_labels.append(label)
     batch_img = np.array(batch_img)
@@ -87,7 +93,7 @@ def plot_confusion_matrix(cm, classes,
     plt.xlabel('Predicted label')
     plt.tight_layout()
 
-def train_and_predict(clf, train_set, test_set, batch_size, get_batch, img_path, output):
+def train_and_predict(clf, train_set, test_set, batch_size, img_path, feature_param=None, output=None):
     ''' 
     Trains the model and saves confusion matrix.
 
@@ -96,15 +102,17 @@ def train_and_predict(clf, train_set, test_set, batch_size, get_batch, img_path,
         train_set: Training set
         test_set: Test set 
         batch_size: Batch size 
-        img_path: path to image directory
-        output: Output filename
+        img_path: Path to image directory
+        feature_param: Custom feature Extraction parameters, defaults to None.
+        output: Output filename, defaults to None
 
     Returns: 
         Prediction labels, precision, accuracy and recall results
     '''
     s_time = time.time()
     for i in range(0, train_set.shape[0], batch_size):
-        features_train, train_label = get_batch(train_set, i, batch_size, img_path)
+        print(i)
+        features_train, train_label = get_batch(train_set, i, batch_size, img_path, feature_param=feature_param)
 
         features_train = features_train.reshape(features_train.shape[0], -1)
         clf.partial_fit(features_train, train_label, classes=unique_classes)
@@ -112,7 +120,7 @@ def train_and_predict(clf, train_set, test_set, batch_size, get_batch, img_path,
     all_test_label = []
     all_pred = []
     for i in range(0, test_df.shape[0], batch_size):
-        features_test, test_label = get_batch(test_df, i, batch_size)
+        features_test, test_label = get_batch(test_df, i, batch_size, img_path, feature_param=feature_param)
         features_test = features_test.reshape(features_test.shape[0], -1)
         
         preds = svm.predict(features_test)
@@ -130,12 +138,13 @@ def train_and_predict(clf, train_set, test_set, batch_size, get_batch, img_path,
     class_names = unique_classes
 
     # Plot normalized confusion matrix
-    plt.figure(figsize=(20, 20))
-    plot_confusion_matrix(cnf_matrix, classes=class_names, normalize=True,
-                          title='Normalized confusion matrix')
-    plt.savefig(output)
-    plt.show()
-    f_time = time.time()
+    if not output:
+        plt.figure(figsize=(20, 20))
+        plot_confusion_matrix(cnf_matrix, classes=class_names, normalize=True,
+                            title='Normalized confusion matrix')
+        plt.savefig(output)
+        plt.show()
+        f_time = time.time()
     print("Executed in: {}\n".format(f_time - s_time))
     
     return all_pred, prec, acc, recall
@@ -157,7 +166,7 @@ def k_fold_training_svm(data_path, k, output_dir, save_model=True)
     skf = StratifiedKFold(n_splits = k)
     k_fold = list(skf.split(df["Id"], df["Category"]))
     unique_classes = df["Category"].unique()
-    num_classes = df["Category"].unique().shape[0]
+    num_classes = unique_classes.shape[0]
 
     preds = []
     batch_size = 10
@@ -177,7 +186,7 @@ def k_fold_training_svm(data_path, k, output_dir, save_model=True)
         train_df = shuffle(df.iloc[fold[0]]).reset_index(drop=True)
         test_df = shuffle(df.iloc[fold[1]]).reset_index(drop=True)
 
-        train_and_predict(svm, train_df, test_df, batch_size, "{}/Plots/confusion_{}.jpg".format(output_dir, k))
+        train_and_predict(svm, train_df, test_df, batch_size, img_path, "{}/Plots/confusion_{}.jpg".format(output_dir, k))
         # for i in range(0, train_df.shape[0], batch_size):
         #     features_train, train_label = get_batch(train_df, i, batch_size)
 
