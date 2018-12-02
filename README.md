@@ -30,6 +30,12 @@ wget http://podoce.dinf.usherbrooke.ca/static/dataset/MIO-TCD-Classification.tar
 wget http://podoce.dinf.usherbrooke.ca/static/dataset/MIO-TCD-Localization.tar
 ```
 
+In addition to the provided datasets, an additional dataset was generated using the ground truth predictions for the localization dataset and can be downloaded [here](https://415.blob.core.windows.net/data/localizations_cropped.zip). The dataset can also be downloaded directly through a linex terminal.
+
+```
+wget https://415.blob.core.windows.net/data/localizations_cropped.zip
+```
+
 #### Python Packages
 
 The necessary python packages can be installed by running the requirements.txt file using pip.
