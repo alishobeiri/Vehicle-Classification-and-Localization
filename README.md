@@ -50,11 +50,11 @@ All source code for the project can be found in the *src* folder. The main root 
 
 * **classifier.py:** Runs the trained classifier model k-folds through the classification dataset. This code works with both SVM and Logistic Regression models. Use the following command to run the code: 
 
-` python classifier.py -d <data_path> -o <output_directory> -c <classfiier / svm or logreg> -k <number of k-folds>
+` python classifier.py -d <data_path> -o <output_directory> -c <classfiier / svm or logreg> -k <number of k-folds> `
 
 All the arguments are mandatory except for the number of kfolds.
 
-* **localizer:** Runs the trained yolo model through a test localization set while also feeding the localization outputs to the trained SVM classifier. This script outputs results for localization (using YOLO) in addition to classification (using both YOLO and SVM).
+* **localizer.py:** Runs the trained yolo model through a test localization set while also feeding the localization outputs to the trained SVM classifier. This script outputs results for localization (using YOLO) in addition to classification (using both YOLO and SVM).
 
 In addition to the main scripts are a set of directories used for various tasks:
 
