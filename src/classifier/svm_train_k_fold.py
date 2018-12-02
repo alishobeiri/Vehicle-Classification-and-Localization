@@ -193,44 +193,15 @@ def k_fold_training_svm(data_path, k, output_dir, save_model=True):
         train_df = shuffle(df.iloc[fold[0]]).reset_index(drop=True)
         test_df = shuffle(df.iloc[fold[1]]).reset_index(drop=True)
 
-        _, prec, acc, recall = train_and_predict(svm, train_df, test_df, batch_size, img_path, "{}/Plots/confusion_{}.jpg".format(output_dir, k))
-        # for i in range(0, train_df.shape[0], batch_size):
-        #     features_train, train_label = get_batch(train_df, i, batch_size)
-
-        #     features = features_train.reshape(features_train.shape[0], -1)
-        #     svm.partial_fit(features, train_label, classes=unique_classes)
+        _, prec, acc, recall = train_and_predict(svm, 
+                                                train_df, 
+                                                test_df, 
+                                                batch_size, 
+                                                img_path, 
+                                                "{}/Plots/confusion_{}.jpg".format(output_dir, k))
         
         if save_model:
             dump(svm, join(output_dir, 'svm_k_' + str(k) + '.joblib'))
-        # all_test_label = []
-        # all_pred = []
-        # for i in range(0, test_df.shape[0], batch_size):
-        #     features_test, test_label = get_batch(test_df, i, batch_size)
-        #     features = features_test.reshape(features_test.shape[0], -1)
-            
-        #     preds = svm.predict(features)
-        #     all_test_label.extend(test_label)
-        #     all_pred.extend(preds)
-        
-        # prec = precision_score(all_test_label, all_pred, average='macro')
-        # acc = accuracy_score(all_test_label, all_pred)
-        # recall = recall_score(all_test_label, all_pred, average='macro')
-        # print("prec: ", prec)
-        # print("acc: ", acc)
-        # print("recall: ", recall)
-        # cnf_matrix = confusion_matrix(all_pred, all_test_label)
-        # np.set_printoptions(precision=2)
-        # class_names = unique_classes
-
-        # # Plot normalized confusion matrix
-        # plt.figure(figsize=(20, 20))
-        # plot_confusion_matrix(cnf_matrix, classes=class_names, normalize=True,
-        #                       title='Normalized confusion matrix')
-        # plt.savefig("./Plots/confusion_"+str(j)+".jpg")
-        # plt.show()
-        # f_time = time.time()
-        # print("Executed in: ", f_time - s_time)
-        # print("\n")
         
         prec_acc_recall.append((prec, acc, recall))
     np.savetxt(join(output_dir, 'Measures/prec_acc_recall.csv'), 
