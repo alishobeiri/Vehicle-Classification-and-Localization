@@ -55,12 +55,12 @@ def param_tuning(data_path, orientation_list, cell_size_list, block_size_list, o
                     print('new best f1 score', best_f1_score)
                     print('new best param', best_parameters)
                     print('\n')
-                writer.writerow(feature_param, f1)
+                writer.writerow([orientation, block_size, cell_size, f1])
 
     print('\nfinal best parameters', best_parameters) 
     
     writer.writerow([])
-    writer.writerow(best_parameters + best_f1_score)
+    writer.writerow([best_parameters[0], best_parameters[1], best_parameters[2], best_f1_score])
 
 if __name__ == "__main__":
     data_path = "../../../../data/Classification/"
