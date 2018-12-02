@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+import matplotlib 
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import os
 from os.path import join
@@ -36,7 +38,7 @@ def hog(img, orientations=4, block_size=3, cell_size=3, plot=False):
         plt.show()
     return fd
 
-def get_batch(df, index, img_path, batch_size=10000, features=True):
+def get_batch(df, index, batch_size, img_path, features=True):
     batch_df = df.iloc[index:index+batch_size]
     batch_img = []
     batch_labels = []
@@ -87,7 +89,7 @@ def plot_confusion_matrix(cm, classes,
     plt.xlabel('Predicted label')
     plt.tight_layout()
 
-def train_and_predict(clf, train_set, test_set, batch_size, get_batch, img_path, output):
+def train_and_predict(clf, train_set, test_set, batch_size, img_path, output):
     ''' 
     Trains the model and saves confusion matrix.
 
@@ -103,19 +105,20 @@ def train_and_predict(clf, train_set, test_set, batch_size, get_batch, img_path,
         Prediction labels, precision, accuracy and recall results
     '''
     s_time = time.time()
+    unique_classes = train_set["Category"].unique()
+    num_classes = unique_classes.shape[0]
     for i in range(0, train_set.shape[0], batch_size):
         features_train, train_label = get_batch(train_set, i, batch_size, img_path)
-
         features_train = features_train.reshape(features_train.shape[0], -1)
         clf.partial_fit(features_train, train_label, classes=unique_classes)
 
     all_test_label = []
     all_pred = []
-    for i in range(0, test_df.shape[0], batch_size):
-        features_test, test_label = get_batch(test_df, i, batch_size)
+    for i in range(0, test_set.shape[0], batch_size):
+        features_test, test_label = get_batch(test_set, i, batch_size, img_path)
         features_test = features_test.reshape(features_test.shape[0], -1)
         
-        preds = svm.predict(features_test)
+        preds = clf.predict(features_test)
         all_test_label.extend(test_label)
         all_pred.extend(preds)
     
@@ -140,7 +143,7 @@ def train_and_predict(clf, train_set, test_set, batch_size, get_batch, img_path,
     
     return all_pred, prec, acc, recall
 
-def k_fold_training_svm(data_path, k, output_dir, save_model=True)
+def k_fold_training_svm(data_path, k, output_dir, save_model=True):
     ''' 
     Performs k_fold training on the dataset using SVM.
 
@@ -154,6 +157,7 @@ def k_fold_training_svm(data_path, k, output_dir, save_model=True)
     '''
     img_path = join(data_path, 'train')
     df = pd.read_csv(join(data_path, 'gt_train.csv'), names=["Id", "Category"])
+    df = df.head(30000)
     skf = StratifiedKFold(n_splits = k)
     k_fold = list(skf.split(df["Id"], df["Category"]))
     unique_classes = df["Category"].unique()
@@ -165,6 +169,8 @@ def k_fold_training_svm(data_path, k, output_dir, save_model=True)
     prec_acc_recall = []
 
     # Create Plot and Measure folders if they don't exist already. 
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     if not os.path.exists(join(output_dir, 'Plots')):
         os.makedirs(join(output_dir, 'Plots'))
     if not os.path.exists(join(output_dir, 'Measures')):
@@ -177,7 +183,7 @@ def k_fold_training_svm(data_path, k, output_dir, save_model=True)
         train_df = shuffle(df.iloc[fold[0]]).reset_index(drop=True)
         test_df = shuffle(df.iloc[fold[1]]).reset_index(drop=True)
 
-        train_and_predict(svm, train_df, test_df, batch_size, "{}/Plots/confusion_{}.jpg".format(output_dir, k))
+        _, prec, acc, recall = train_and_predict(svm, train_df, test_df, batch_size, img_path, "{}/Plots/confusion_{}.jpg".format(output_dir, k))
         # for i in range(0, train_df.shape[0], batch_size):
         #     features_train, train_label = get_batch(train_df, i, batch_size)
 
@@ -185,7 +191,7 @@ def k_fold_training_svm(data_path, k, output_dir, save_model=True)
         #     svm.partial_fit(features, train_label, classes=unique_classes)
         
         if save_model:
-            dump(svm, 'svm_k_' + str(k) + '.joblib')
+            dump(svm, join(output_dir, 'svm_k_' + str(k) + '.joblib'))
         # all_test_label = []
         # all_pred = []
         # for i in range(0, test_df.shape[0], batch_size):
@@ -223,7 +229,7 @@ def k_fold_training_svm(data_path, k, output_dir, save_model=True)
                header="precision,accuracy,recall")
 
 
-if __name__ == "__main__":
-    data_path = "../../../MIO-TCD/MIO-TCD-Classification/
-    output_dir = "./Measures/prec_acc_recall.txt"
-    k_fold_training(data_path=data_path, k=10, save_model=True, output_dir=output_dir)
+if __name__ == "__main__" :
+    data_path = "../../../../data/Classification/"
+    output_dir = "./test/"
+    k_fold_training_svm(data_path=data_path, k=10, save_model=True, output_dir=output_dir)
