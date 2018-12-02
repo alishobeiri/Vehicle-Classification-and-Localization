@@ -8,6 +8,18 @@ from os.path import join
 import pandas as pd
 
 def param_tuning(data_path, orientation_list, cell_size_list, block_size_list, output_dir):
+    """
+    Tunes HoG feature extraction parameters with SVM to find best parameters. 
+
+    Args:
+        data_path: Path to training dataset
+        orientation_list: List of number of orientation parameters candidates 
+        cell_size_list: List of cell size candidates
+        block_size+list: List of block size candidates
+        output_dir: Path to output file directory
+    """
+
+    # Get training and testing sets. 
     img_path = join(data_path, 'train')
     df = pd.read_csv(join(data_path, 'gt_train.csv'), names=["Id", "Category"])
     df = df.sample(frac=0.05)
@@ -31,6 +43,8 @@ def param_tuning(data_path, orientation_list, cell_size_list, block_size_list, o
         os.makedirs(output_dir)   
     writer = csv.writer(open(join(output_dir, 'feature_extraction_param.csv'), mode='w'))
     writer.writerow('orientation,block_size,cell_size,f1')
+
+    # Iterate through every set of parameter combinations. 
     for orientation in orientation_list:
         for block_size in block_size_list:
             for cell_size in cell_size_list:
@@ -41,6 +55,7 @@ def param_tuning(data_path, orientation_list, cell_size_list, block_size_list, o
                 }
                 svm = SGDClassifier(penalty='l2')
 
+                # Train SVM classifier and get precision score. 
                 pred = train_and_predict(svm, 
                                          train_set, 
                                          test_set, 
@@ -48,6 +63,8 @@ def param_tuning(data_path, orientation_list, cell_size_list, block_size_list, o
                                          img_path,
                                          feature_param=feature_param)[0]
                 f1 = f1_score(pred, gt_label, average='micro')
+
+                # Keep track of best parameter combinations. 
                 if f1 > best_f1_score:
                     best_f1_score = f1
                     best_parameters = (orientation, block_size, cell_size)
