@@ -36,7 +36,7 @@ def plot_confusion_matrix(cm, classes,
     plt.xlabel('Predicted label')
     plt.tight_layout()
 
-iteration = '25000'
+iteration = '15000'
 
 # load class names
 class_names = [
@@ -69,8 +69,8 @@ scores_svm = classification_report(labels, svm_pred, target_names=class_names)
 scores_yolo = classification_report(labels, yolo_pred, target_names=class_names)
 # with open('scores-svm-{}.txt'.format(iteration), 'w') as f:
 #     f.write(scores_svm)
-# with open('scores-yolo-{}.txt'.format(iteration), 'w') as f:
-#     f.write(scores_yolo)
+with open('scores-yolo-{}.txt'.format(iteration), 'w') as f:
+    f.write(scores_yolo)
 
 # compute confusion matrix
 svm_confusion = confusion_matrix(svm_pred, labels)
