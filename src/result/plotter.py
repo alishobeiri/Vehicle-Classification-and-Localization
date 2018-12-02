@@ -22,7 +22,7 @@ def plot_confusion_matrix(cm, classes,
     plt.title(title)
     plt.colorbar()
     tick_marks = np.arange(len(classes))
-    plt.xticks(tick_marks, classes, rotation=45)
+    plt.xticks(tick_marks, classes, rotation=90)
     plt.yticks(tick_marks, classes)
 
     fmt = '.2f' if normalize else 'd'
@@ -36,7 +36,7 @@ def plot_confusion_matrix(cm, classes,
     plt.xlabel('Predicted label')
     plt.tight_layout()
 
-iteration = '15000'
+iteration = '25000'
 
 # load class names
 class_names = [
@@ -67,8 +67,8 @@ for i in range(1, len(predictions)):
 # compute precision and recalls
 scores_svm = classification_report(labels, svm_pred, target_names=class_names)
 scores_yolo = classification_report(labels, yolo_pred, target_names=class_names)
-# with open('scores-svm-{}.txt'.format(iteration), 'w') as f:
-#     f.write(scores_svm)
+with open('scores-svm-{}.txt'.format(iteration), 'w') as f:
+    f.write(scores_svm)
 with open('scores-yolo-{}.txt'.format(iteration), 'w') as f:
     f.write(scores_yolo)
 
@@ -77,10 +77,10 @@ svm_confusion = confusion_matrix(svm_pred, labels)
 yolo_confusion = confusion_matrix(yolo_pred, labels)
 
 # plot confusion matrix
-# plt.figure(figsize=(8,8))
-# plot_confusion_matrix(svm_confusion, classes=class_names, normalize=True,
-#                       title='SVM Classification On Localization Dataset')
-# plt.savefig('confusion-svm-{}.png'.format(iteration))
+plt.figure(figsize=(8,8))
+plot_confusion_matrix(svm_confusion, classes=class_names, normalize=True,
+                      title='SVM Classification On Localization Dataset')
+plt.savefig('confusion-svm-{}.png'.format(iteration))
 
 plt.figure(figsize=(8,8))
 plot_confusion_matrix(yolo_confusion, classes=class_names, normalize=True,
