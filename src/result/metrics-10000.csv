@@ -1,0 +1,6 @@
+Localization True Positives: 51076
+Localization False Positives : 15050
+Localization False Negatives: 35864
+Correct Classifications (SVM): 36614/51076
+Correct Classifications (YOLO): 43564/51076
+Dice Score: 0.6673722446526335
