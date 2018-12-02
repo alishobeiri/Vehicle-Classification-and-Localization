@@ -1,0 +1,412 @@
+\documentclass[12pt]{article}
+\usepackage[english]{babel}
+\usepackage{url}
+\usepackage[utf8x]{inputenc}
+\usepackage{amsmath}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{graphicx}
+\usepackage{parskip}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{vmargin}
+\usepackage{subfig}
+\usepackage{float}
+\usepackage{cite} 
+\usepackage{hyperref}
+\usepackage[title]{appendix}
+\setmarginsrb{3 cm}{2.5 cm}{3 cm}{2.5 cm}{1 cm}{1.5 cm}{1 cm}{1.5 cm}
+
+\title{Final Project}  % Title
+\author{John Wu \\ 
+        Frank Ye \\ 
+        Tiffany Wang \\ 
+        Nathan Clairmonte \\ 
+        Ali Shobeiri}  % Author
+\date{November 30, 2018} % Date
+
+\makeatletter
+\let\thetitle\@title
+\let\theauthor\@author
+\let\thedate\@date
+\makeatother
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\thetitle}
+\cfoot{\thepage}
+
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{0.5 cm}
+    \includegraphics[scale = 0.07]{report/mcgill-logo.png}\\[1.0 cm]   % University Logo
+    \textsc{\LARGE McGill University}\\[1.0 cm]   % University Name
+    \textsc{\Large ECSE 415}\\[0.5 cm]               % Course Code
+    \textsc{\large Introduction To Computer Vision}\\[0.5 cm]               % Course Name
+    \rule{\linewidth}{0.2 mm} \\[0.4 cm]
+    { \huge \bfseries \thetitle}\\
+    \rule{\linewidth}{0.2 mm} \\[1.5 cm]
+    \begin{minipage}{0.4\textwidth}
+        \begin{flushleft} \large
+            \emph{Authors:}\\
+            \theauthor
+            \end{flushleft}
+            \end{minipage}~
+            \begin{minipage}{0.4\textwidth}
+            \begin{flushright} \large
+            \emph{Student Number:} \\
+            260612056 \\ 
+            260689448 \\ 
+            260684152 \\ 
+            260673075 \\ 
+            260665549  % Your Student Number
+        \end{flushright}
+    \end{minipage}\\[2 cm]
+ 
+    {\large \thedate}\\[2 cm]
+ 
+    \vfill
+    
+\end{titlepage}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Introduction}
+ Traffic cameras serve as an effective way to survey traffic congestion over time and at a distance. As the popularity of traffic cameras grow, traffic footage has become more abundant. This abundance 
+
+
+ Since cameras have become increasingly accessible in recent years, traffic footage has become abundant and provides a convenient method to collect images as traffic data. Typically, these images in traffic datasets contain different classes of objects, e.g. as cars, trucks, pedestrians, etc. In the following, this report will summarize our approach to the tasks of detecting and localizing these classes of objects in the MIO-TCD dataset \cite{MIO_TCD}. Specifically, we will go over our methodology and results for data preprocessing, localization and classification methods. Finally, we will conclude the report tackling localization and classification on the dataset with our deep learning model. 
+
+\section{The Classification Task}
+
+The classification challenge requires training a Support Vector Machine (SVM) in addition to another non-deep learning algorithm to classify a set of objects belonging to 11 different categories. The secondary non-deep learning algorithm chosen is logistic regression.
+
+\subsection{The Dataset}
+
+The classification task is performed on the \href{http://podoce.dinf.usherbrooke.ca/static/dataset/MIO-TCD-Classification.tar}{MIO-TCD-Classification Dataset}, which contains 648,959 images, with each image containing an object belonging exclusively to one of the 11 categories found in Table 1. 
+
+    \begin{table}[h] 
+    \centering
+        \begin{tabular}{ || c | c ||}
+            \hline
+            \hline
+            Category Name           & Number of images \\
+            \hline
+            Articulated truck       & 12 933    \\
+            Bicycle                 & 2 855     \\
+            Bus                     & 12 895    \\
+            Car                     & 325 649   \\
+            Motorcycle              & 2 477     \\
+            Non-motorized vehicle   & 2 189     \\
+            Pedestrian              & 7 827     \\
+            Pickup truck            & 63 633    \\
+            Single unit truck       & 6 400     \\
+            Work van                & 12 101    \\
+            Background              & 200 000   \\
+            \hline
+            Total                   & 648 959   \\
+            \hline
+            \hline
+        \end{tabular}
+    \caption{MIO-TCD Classification challenge dataset category breakdown}
+    \end{table}
+
+In Figure \ref{fig:articulated_truck}, we show a sample of the training data. In terms of size, the images are all of different dimensions and were directly cropped out from the \href{http://podoce.dinf.usherbrooke.ca/static/dataset/MIO-TCD-Classification.tar}{MIO-TCD-Localization Dataset}. The largest single dimension for an image in the dataset is found to be 720x720.
+
+\begin{figure}[!htb]
+    \centering
+    \includegraphics{articulated_truck.jpg}
+    \caption{Sample training image - articulated truck}
+    \label{fig:articulated_truck}
+\end{figure}
+
+The dataset is evaluated using 10-fold cross validation. This means that for every iteration, the model is split into 90\% training and 10\% testing images. 
+
+\textbf{Just some notes NOT for final submission: } Dataset is very large and cannot be directly loaded into memory, dataset is loaded in batches of 10 000 images, model is trained on entire dataset through batch training
+
+
+\subsection{Feature Extraction}
+
+In order to compute distinct features on the classification dataset, we made a few design choices that would make this task computationally feasible given our hardware resources, e.g. lack of GPU for training. In the following sections, we describe our data preprocessing steps and motivate our choice for computing HoG features on each image.
+
+\subsection{Data Preprocessing}
+
+In order to reduce computation time in training our classification models, all images in the dataset are resized to dimensions 64 x 64. This decision is a tradeoff we made while trying to balance our computational limitations and memory considerations, as well as our overall model performance (in terms of accuracy, precision, recall, etc.).
+
+In fact, we first experimented with resizing images up to the maximum image size found in the dataset which was found to be 720x720 pixels (up-sampling approach). With this method, we quickly found that our training speed significantly decreased due to an increased number of computations and due to memory limitations. Operating on images of this size decreased the number of samples we could train our classifier with at any given time. With this in mind, we then repeated the process , resizing images to a size of 128x128. However, training times were again too slow and memory limits were still being reached. 
+
+ Finally, we settled on images of size 64x64, which allowed us to use a larger batch size of up to 10 000 images. Hence, we could simultaneously load up a single batch of 10 000 images at once, compute their HoG features, and feed them into our SVM classifier(using the partial\_fit parameter in sklearn, we could run the fit method our model in batches). This strategy lets us train our classifier more efficiently.
+
+\subsubsection{HoG Features}
+
+
+\textit{\textbf{Just some notes NOT for final submission: } A lot of the parameters for HoG features were selected based on memory considerations. All images were resized to 64x64 due to memory considerations. Pixel\_per\_cell = 3x3, cells\_per\_block = 3x3, block norm is 'l1'}
+
+
+\textbf{TO BE COMPLETED} Specify why we used HoG features, and how we computed them (insert a screenshot of an original image, and its corresponding HoG sample) 
+\textbf{Add why we chose 8 directions for HoG}
+
+Different feature variances in the dataset: 
+\begin{itemize}
+    \item Lighting conditions 
+    \item rotation 
+    \item scale 
+    \item aspect ratio 
+\end{itemize}
+
+distinct features in the dataset: 
+\begin{itemize}
+    \item Edges
+    
+\end{itemize}
+
+pros for HoG: 
+\begin{itemize}
+    \item Images that have internal changes in illumination because the edges and gradients are still detected (just a little weaker / stronger, but the orientation are still the same) so lighting invariance. 
+    \item (not sure about this one) normalization done for each overlapping block within a cell. so less noise. and basically standardized data
+\end{itemize}
+
+Sample results can be found in \hyperref[appendix:HoG]{Appendix}.
+
+
+
+\subsection{Methodology}
+
+\subsubsection{Support Vector Machines}
+
+SVM is a discriminative classifier that separates the data using hyperplanes in a kernelized space and was used for our first classifier. We used the \href{https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.SGDClassifier.html}{SGD Classifier} from scikit-learn \cite{sklearn} to complete this part of the project. The SGDClassifier implements regularized linear models, one of which is a linear SVM with stochastic gradient descent (SGD) learning. The gradient of the loss is estimated each sample at a time and the model is updated along the way. In this manner, SGDClassifier allows for online learning, or rather, allows us to fit the classifier on batches of the data at a time. This is useful in our use case as our dataset is large and memory limitations is a consideration. \\
+
+\textbf{ADD STUFF ABOUT DIFFERENT SVM IMPLEMENTATION AND HOW YOU TUNED THE PARAMETERS}
+I didn't really tune any parameters unfortunately.
+
+
+\subsubsection{Decision Trees}
+
+\textbf{REPEAT ABOVE USING DIFFERENT CLASSIFIER}
+
+\subsubsection{Cross Validation}
+
+A k-fold cross validation method was considered, which partitions the data into multiple training/validation combinations and uses the average performance across all data splits to evaluate the performance. A k=10 was used for the cross validation and the data was split into 70/30 ratios for training and test sets respectively.
+
+\textbf{REPORT: AVERAGE CLASSIFICATION ACCURACY ACROSS VALIDATION WITH STANDARD DEVIATIONS} \\
+
+\textbf{REPORT: AVERAGE PRECISION AND RECALL ACROSS VALIDATION. ANSWER: ARE THESE VALUES CONSISTENT WITH THE ACCURACY? ARE THEY MORE REPRESENTATIVE OF THE DATASET? IN WHAT SITUATIONS WOULD YOU EXPECT PRECISION AND RECALL TO BE A BETTER REFLECTION OF A MODEL PERFORMANCE THAN ACCURACY} \\
+
+\textbf{Are these values consistent with the accuracy? Are they more representative of the dataset?}
+
+\textbf{In what situations would you expect precision and recall to be a better reflection of a model performance than accuracy?}
+
+There are many scenarios in which existing dataset classes are imbalanced, i.e. some classes have significantly more samples than others within the set. For example, if we tackle the task of detecting fraudulent credit card transactions, we might have a dataset with 97\% 
+of samples containing legitimate transactions and 3\% fraudulent samples. Some classification algorithms tend to show a bias for the majority class, treating the minority class as noise. Hypothetically, if all fraudulent transactions are misclassified, and all legitimate transcations are well classified, it might be tempting to claim that 97\% accuracy means that the classifier performance is very good. However, that would defeat the purpose of fraud detection, as none of the fraudulent observations are well classified. 
+\medskip
+\noindent Hence, there are better metrics that measure performance on imbalanced datasets, e.g. precision and recall. Precision would measure the number of correctly identified observations as positive out of total items identified as positive. The formula is shown below, and in the situation above we would get 0\% precision (assuming that fraudulent samples are of the positive class).
+
+\begin{equation}
+    Precision = \frac{TP}{TP + FP}
+\end{equation}
+
+\begin{equation}
+    Recall = \frac{TP}{TP + FN}
+\end{equation}
+
+Where 
+\begin{itemize}
+    \item[--] TP = True Positive
+    \item[--] FP = False Positive
+    \item[--] FN = False Negative
+\end{itemize}
+
+\medskip
+\noindent Similarly, recall would measure the number of correctly identified samples as positive out of total actual positives. The formula is given below, and we would get a recall of 0\% for the case described above.
+\textbf{REPORT: CONFUSION MATRX ON VALIDATION SET. PLOT MATRIX AS AN IMAGE. ANSWER: ARE ANY OF THE CLASSES DIFFICULT FOR YOUR CLASSIFIER?} \\
+
+** MAKE SURE TO REPORT FOR BOTH CLASSIFIERS ** \\
+
+\subsubsection{Results}
+
+\textbf{TALK ABOUT INTERPRETATIONS FROM RESULTS HERE}
+
+\textbf{ADD CONFUSION MATRIX}
+
+\section{Localization}
+
+The localization challenge requires training a model that can localize the coordinates of objects in a photo and then classify it using the classifier trained in the previous section. The same classifier is used because the objects from both challenges come from the same dataset. 
+
+\subsection{Dataset}
+
+The localization challenge is completed on the the \href{http://podoce.dinf.usherbrooke.ca/static/dataset/MIO-TCD-Localization.tar}{MIO-TCD-Localization Dataset}. \cite{MIO_TCD}. There are a total of 137,743 training images that contain one or more objects in the following categories: 
+
+    \begin{table}[h] 
+    \centering
+        \begin{tabular}{ || c | c ||}
+            \hline
+            \hline
+            Category Name           & Number of Appearances \\
+            \hline
+            Articulated truck       &  9301 \\
+            Bicycle                 &  2260    \\
+            Bus                     &  10598  \\
+            Car                     &  233497 \\
+            Motorcycle              &  1837    \\
+            Motorized vehicle       &  25845 \\
+            Non-motorized vehicle   &  2350  \\
+            Pedestrian              &  7128  \\
+            Pickup truck            &  44283 \\
+            Single unit truck       &  5741  \\
+            Work van                &  8709  \\
+            \hline
+            Total                   & 351 549   \\
+            \hline
+            \hline
+        \end{tabular}
+    \caption{MIO-TED Localization challenge dataset category breakdown}
+    \end{table}
+
+All images vary in size and are accompanied by a ground truth list of detected objects and their labels. Unlike the classification challenge dataset, the labels do not include the \textit{background} label, and focuses on what is on the foreground. 
+
+\subsection{YOLO}
+
+For our localization, a YOLOv3 (You Only Look Once V3) \cite{YOLO} implementation was used. YOLOv3 is a state-of-the-art of deep learning algorithm which uses a single neural network to predict both bounding boxes and class probabilities for objects in an image, in a single evaluation. This allows the prediction to be evaluated with global context from the whole image at test time. Using the given labelled data, custom weights were trained using the YOLOv3 implementation. The exact implementation will be further discussed in the bonus section for using deep learning approaches. \\
+
+Since it was required to use the classifier in the previous section for predicting the labels of the object, only the localization feature of the YOLO model will be used for this challenge. However, the same YOLOv3 model will be used with its full features for the next challenge.
+
+\subsection{Cross Validation}
+
+For evaluating the YOLOv3 model, the data was split into testing and validation sets for cross validation when training the model. A test set was aside for evaluation of the custom model. The data was split into 70/20/10 ratios for training, validation, and test sets respectively.
+
+\textbf{Is this still true?}
+\textbf{FOR REPORT: Description of your cross-validation approach.}
+
+\begin{itemize}
+    \item We didn't do k-fold cross validation on location because it's not standard practice to do so with Deep Learning models. The reason why we do k-fold is because we wanna have better generalization. However, DL model generally do not overfit.... ? (until like a lot a lot of epochs) 
+    \item So what we did is that we just separated the training set into k=3 folds at the last epoch and ran prediction on these and got the Dice value. 
+\end{itemize}
+
+\subsection{DICE Coefficient}
+
+Another metric used for evaluating the YOLOv3 model was the DICE coefficient for the predicted vs. true bounding boxes. The DICE coefficient is a metric that compares the similarity between two datasets. The DICE coefficient of two sets $X$ and $Y$ can be defined as follows:  
+
+\begin{equation}
+    DICE = \frac{2 \rvert X \cap Y \rvert} 
+            {\rvert X \rvert + \rvert Y \rvert} 
+\end{equation}
+
+When being applied to boolean data, using the definition of true positive (TP), false positive (FP), and false negative (FN), it can be written as follows:
+
+\begin{equation}
+    DICE = \frac{2TP}{2TP + FP + FN} 
+\end{equation}
+
+\subsection{Result}
+
+\subsubsection{Detection} 
+
+\begin{itemize}
+    \item The Ground truth had variable sizes for height and width, and the bounding boxes coordinates are in that the original image's dimension as well 
+    \item So first thing we did, was to scale the bounding box coordinates into (416 x 416) which YOLO training sample dimensions. 
+    \item Then we looked at the maximum overlapping number of pixels between every ground truth box and localized boxed in every sample. and if nb\_overlap > 70\% of ground truth box size then the object is considered detected. 
+    \textbf{FRANK PLEASE LET ME KNOW IF YOU DON"T UNDERSTAND THIS}
+\end{itemize}
+
+\begin{figure}[!htb]
+    \centering
+    \includegraphics[width=.8\linewidth]{detection_overlap.png}
+    \caption{Matching location to the ground truth technique}
+\end{figure}
+    
+\textbf{CAN SOMEONE DOUBLE CHECK THE CAPTION :D}
+
+
+\textbf{JOHN: please fill in your detection results}
+
+\section{Deep Learning Approach}
+
+\subsection{Design}
+
+
+\subsubsection{Architecture}
+
+We used YOLO Darknet \cite{Darknet13} as our base model. It is an open-source Neural Network developed by Joseph Redmond specifically to perform both localization and classification simultaneously. 
+
+\begin{figure}[!htb]
+\includegraphics[width=\linewidth]{Darknet_Architecture.png}
+\caption{YOLO Macro-Architecture}
+\label{fig:darknet}
+\end{figure}
+
+Although YOLO came with pre-trained weights for traffic objects, we retrained the model with our training data from MIO\_TCD. 
+
+\subsection{Results}
+
+
+
+
+
+\section{Constraints and Limitations} 
+
+\textbf{ FRANK HELP ME ENGLISH}
+\begin{itemize}
+    \item Really computationally heavy
+    \item Used Microsoft Azure Cloud Computing resources to train our model. Used parallel distributed training on two K80 GPUs (https://www.nvidia.com/en-gb/data-center/tesla-k80/) 
+\end{itemize}
+
+
+\section{Conclusion}
+
+\newpage
+
+\begin{thebibliography}{50}
+
+\bibitem{MIO_TCD}
+Z. Luo, F.B.Charron, C.Lemaire, J.Konrad, S.Li, A.Mishra, A. Achkar, J. Eichel, P-M Jodoin "MIO-TCD: A new benchmark dataset for vehicle classification and localization" in press at \textit{IEEE Transactions on Image Processing}, 2018
+
+\bibitem{sklearn}
+Scikit-learn: Machine Learning in Python, Pedregosa et al., JMLR 12, pp. 2825-2830, 2011.
+
+\bibitem{YOLO}
+Redmon, J., Divvala, S., Girshick, R., Farhadi, A.: You only look once: unified, real-time object detection. In \textit{CVPR, 2016}
+
+\bibitem{Darknet13}
+Redmon, J.: Darknet: Open Source Neural Networks in C, in \textit{http://pjreddie.com/darknet/}, 2013-2016
+
+
+\end{thebibliography}
+
+\newpage
+
+\setcounter{section}{0}
+
+\begin{appendices} 
+
+
+\section{HoG}
+
+\label{appendix:HoG}
+
+\begin{figure}[!htb]
+    \centering
+    \begin{subfigure}[t]{\textwidth}
+        \centering
+        \includegraphics[width=.7\linewidth]{HoG/Car.png} 
+        \caption{Car} \label{fig:HoG_car}
+    \end{subfigure}
+    \begin{subfigure}[t]{.7\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{HoG/Articulated_truck.png} 
+        \caption{Articulated truck} 
+        \label{fig:HoG_truck}
+    \end{subfigure}
+    \begin{subfigure}[t]{\textwidth}
+        \centering
+        \includegraphics[width=.7\linewidth]{HoG/Pedastrian.png}
+        \caption{Articulated truck} 
+        \label{fig:HoG_Pedastrian}
+    \end{subfigure}
+    \caption{HoG Feature Extraction Results}
+\end{figure}
+
+\end{appendices}
+
+\end{document}
