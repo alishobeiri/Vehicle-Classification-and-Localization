@@ -38,7 +38,7 @@ def hog(img, orientations=4, block_size=3, cell_size=3, plot=False):
         plt.show()
     return fd
 
-def get_batch(df, index, batch_size, img_path, features=None, viz=False):
+def get_batch(df, index, batch_size, img_path, feature_param=None, viz=False):
     batch_df = df.iloc[index:index+batch_size]
     batch_img = []
     batch_labels = []
@@ -47,11 +47,11 @@ def get_batch(df, index, batch_size, img_path, features=None, viz=False):
         img = cv2.imread(img_filename, cv2.IMREAD_COLOR)
         if img is not None:
             img = cv2.resize(img, (64, 64))
-            if features:
+            if feature_param:
                 img = hog(img, 
-                          orientations=features['orientation'],
-                          block_size=features['block_size'],
-                          cell_size=features['cell_size'],
+                          orientations=feature_param['orientations'],
+                          block_size=feature_param['block_size'],
+                          cell_size=feature_param['cell_size'],
                           plot=viz)
             else:
                 img = hog(img, plot=viz)
@@ -115,7 +115,6 @@ def train_and_predict(clf, train_set, test_set, batch_size, img_path, feature_pa
     unique_classes = train_set["Category"].unique()
     num_classes = unique_classes.shape[0]
     for i in range(0, train_set.shape[0], batch_size):
-        print(i)
         features_train, train_label = get_batch(train_set, i, batch_size, img_path, feature_param=feature_param)
 
         features_train = features_train.reshape(features_train.shape[0], -1)
@@ -142,13 +141,13 @@ def train_and_predict(clf, train_set, test_set, batch_size, img_path, feature_pa
     class_names = unique_classes
 
     # Plot normalized confusion matrix
-    if not output:
+    if output:
         plt.figure(figsize=(20, 20))
         plot_confusion_matrix(cnf_matrix, classes=class_names, normalize=True,
                             title='Normalized confusion matrix')
         plt.savefig(output)
         plt.show()
-        f_time = time.time()
+    f_time = time.time()
     print("Executed in: {}\n".format(f_time - s_time))
     
     return all_pred, prec, acc, recall
@@ -190,6 +189,7 @@ def k_fold_training_svm(data_path, k, output_dir, save_model=True):
         s_time = time.time()
         print("Iteration/K-Valid: ", k)
         svm = SGDClassifier(penalty='l2')
+        print(fold[0])
         train_df = shuffle(df.iloc[fold[0]]).reset_index(drop=True)
         test_df = shuffle(df.iloc[fold[1]]).reset_index(drop=True)
 
@@ -198,7 +198,7 @@ def k_fold_training_svm(data_path, k, output_dir, save_model=True):
                                                 test_df, 
                                                 batch_size, 
                                                 img_path, 
-                                                "{}/Plots/confusion_{}.jpg".format(output_dir, k))
+                                                output="{}/Plots/confusion_{}.jpg".format(output_dir, k))
         
         if save_model:
             dump(svm, join(output_dir, 'svm_k_' + str(k) + '.joblib'))
