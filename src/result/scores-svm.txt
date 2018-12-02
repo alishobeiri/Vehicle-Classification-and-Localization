@@ -1,0 +1,15 @@
+                       precision    recall  f1-score   support
+
+    articulated_truck       0.37      0.27      0.31      1121
+              bicycle       0.28      0.23      0.25       182
+                  bus       0.64      0.35      0.45      1987
+                  car       0.80      0.88      0.84     42023
+           motorcycle       0.01      0.01      0.01       161
+    motorized_vehicle       0.19      0.06      0.09      1938
+non-motorized_vehicle       0.04      0.02      0.02       191
+           pedestrian       0.07      0.35      0.12       100
+         pickup_truck       0.47      0.46      0.47      9117
+    single_unit_truck       0.22      0.02      0.04       592
+             work_van       0.26      0.08      0.13      1572
+
+          avg / total       0.69      0.72      0.70     58984
