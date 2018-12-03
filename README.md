@@ -1,5 +1,7 @@
 # ECSE 415 - Introduction To Computer Vision Final Project
 
+_Nathan Clairmonte, Ali Shobeiri, Tiffany Wang, John Wu, Frank Ye._
+
 The following repository holds the source code for the ECSE 415 - Introduction To Computer Vision course final project. The final project involves completing both the classification and localization on the [MIO-TCD](http://podoce.dinf.usherbrooke.ca/challenge/dataset/) dataset with specific method restrictions. The exact requirements can be found in the attached PDF file.
 
 ## Prerequisites 
